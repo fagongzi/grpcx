@@ -14,21 +14,19 @@ type ClientCreator func(string, *grpc.ClientConn) interface{}
 type GRPCClient struct {
 	sync.RWMutex
 
-	prefix  string
 	creator ClientCreator
 	opts    *clientOptions
 	clients map[string]interface{}
 }
 
 // NewGRPCClient returns a GRPC Client
-func NewGRPCClient(prefix string, creator ClientCreator, opts ...ClientOption) *GRPCClient {
+func NewGRPCClient(creator ClientCreator, opts ...ClientOption) *GRPCClient {
 	copts := &clientOptions{}
 	for _, opt := range opts {
 		opt(copts)
 	}
 
 	return &GRPCClient{
-		prefix:  prefix,
 		opts:    copts,
 		creator: creator,
 		clients: make(map[string]interface{}),
@@ -67,7 +65,7 @@ func (c *GRPCClient) createClient(name string) (interface{}, error) {
 	grpcOptions = append(grpcOptions, grpc.WithTimeout(c.opts.timeout))
 	grpcOptions = append(grpcOptions, grpc.WithBlock())
 	grpcOptions = append(grpcOptions, grpc.WithBalancer(grpc.RoundRobin(c.opts.resolver)))
-	conn, err := grpc.Dial(fmt.Sprintf("%s/%s", c.prefix, name), grpcOptions...)
+	conn, err := grpc.Dial(fmt.Sprintf("%s/%s", c.opts.prefix, name), grpcOptions...)
 	if err != nil {
 		return nil, err
 	}
