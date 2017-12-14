@@ -41,9 +41,7 @@ func (p *etcdPublisher) Publish(service string, meta naming.Update) error {
 		return err
 	}
 
-	ctx, cancel = context.WithTimeout(p.client.Ctx(), p.timeout)
-	_, err = p.client.KeepAlive(ctx, leaseResp.ID)
-	cancel()
+	_, err = p.client.KeepAlive(p.client.Ctx(), leaseResp.ID)
 	if err != nil {
 		return err
 	}
