@@ -42,7 +42,13 @@ func (p *etcdPublisher) Publish(service string, meta naming.Update) error {
 	}
 
 	ctx, cancel = context.WithTimeout(p.client.Ctx(), p.timeout)
-	defer cancel()
+	_, err = p.client.KeepAlive(ctx, leaseResp.ID)
+	cancel()
+	if err != nil {
+		return err
+	}
 
+	ctx, cancel = context.WithTimeout(p.client.Ctx(), p.timeout)
+	defer cancel()
 	return p.resolver.Update(ctx, fmt.Sprintf("%s/%s", p.prefix, service), meta, clientv3.WithLease(clientv3.LeaseID(leaseResp.ID)))
 }

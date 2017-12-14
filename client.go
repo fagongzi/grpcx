@@ -43,12 +43,11 @@ func (c *GRPCClient) GetServiceClient(name string) (interface{}, error) {
 	c.RUnlock()
 
 	client, err := c.createClient(name)
+
 	if err != nil {
-		c.RUnlock()
 		return nil, err
 	}
 
-	c.RUnlock()
 	return client, nil
 }
 
@@ -65,6 +64,7 @@ func (c *GRPCClient) createClient(name string) (interface{}, error) {
 	grpcOptions = append(grpcOptions, grpc.WithTimeout(c.opts.timeout))
 	grpcOptions = append(grpcOptions, grpc.WithBlock())
 	grpcOptions = append(grpcOptions, grpc.WithBalancer(grpc.RoundRobin(c.opts.resolver)))
+
 	conn, err := grpc.Dial(fmt.Sprintf("%s/%s", c.opts.prefix, name), grpcOptions...)
 	if err != nil {
 		return nil, err
@@ -72,7 +72,6 @@ func (c *GRPCClient) createClient(name string) (interface{}, error) {
 
 	cli := c.creator(name, conn)
 	c.clients[name] = cli
-	c.Unlock()
 
 	return cli, nil
 }
