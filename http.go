@@ -2,6 +2,7 @@ package grpcx
 
 import (
 	"context"
+	"io/ioutil"
 	"net/http"
 	"strings"
 
@@ -34,38 +35,43 @@ func (s *httpServer) stop() error {
 }
 
 func (s *httpServer) addService(service Service) {
-	if service.Metadata.HTTP != nil {
-		m := strings.ToUpper(service.Metadata.HTTP.Method)
+	for _, ep := range service.opts.httpEntrypoints {
+		m := strings.ToUpper(ep.method)
 		switch m {
 		case echo.GET:
-			s.server.GET(service.Metadata.HTTP.Path, func(c echo.Context) error {
-				return s.handleHTTP(c, service)
+			s.server.GET(ep.path, func(c echo.Context) error {
+				return s.handleHTTP(c, ep)
 			})
 		case echo.PUT:
-			s.server.PUT(service.Metadata.HTTP.Path, func(c echo.Context) error {
-				return s.handleHTTP(c, service)
+			s.server.PUT(ep.path, func(c echo.Context) error {
+				return s.handleHTTP(c, ep)
 			})
 		case echo.DELETE:
-			s.server.DELETE(service.Metadata.HTTP.Path, func(c echo.Context) error {
-				return s.handleHTTP(c, service)
+			s.server.DELETE(ep.path, func(c echo.Context) error {
+				return s.handleHTTP(c, ep)
 			})
 		case echo.POST:
-			s.server.POST(service.Metadata.HTTP.Path, func(c echo.Context) error {
-				return s.handleHTTP(c, service)
+			s.server.POST(ep.path, func(c echo.Context) error {
+				return s.handleHTTP(c, ep)
 			})
 		}
 	}
 }
 
-func (s *httpServer) handleHTTP(c echo.Context, service Service) error {
-	if service.invoker == nil {
+func (s *httpServer) handleHTTP(c echo.Context, ep *httpEntrypoint) error {
+	if ep.invoker == nil {
 		return c.NoContent(http.StatusServiceUnavailable)
 	}
 
-	data, err := service.invoker(c.Request().Body)
+	data, err := ioutil.ReadAll(c.Request().Body)
 	if err != nil {
-		return c.String(http.StatusInternalServerError, err.Error())
+		return c.String(http.StatusBadRequest, err.Error())
 	}
 
-	return c.JSONBlob(http.StatusOK, data)
+	result, err := ep.invoker(data)
+	if err != nil {
+		return c.String(http.StatusServiceUnavailable, err.Error())
+	}
+
+	return c.JSONBlob(http.StatusOK, result)
 }

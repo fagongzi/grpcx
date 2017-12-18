@@ -58,7 +58,7 @@ func (s *GRPCServer) Start() error {
 	if s.opts.httpServer != "" {
 		s.httpServer = newHTTPServer(s.opts.httpServer)
 		for _, service := range s.services {
-			if service.Metadata.HTTP != nil {
+			if len(service.opts.httpEntrypoints) > 0 {
 				s.httpServer.addService(service)
 				log.Infof("rpc: service %s added to http proxy", service.Name)
 			}
