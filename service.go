@@ -1,5 +1,9 @@
 package grpcx
 
+import (
+	"github.com/labstack/echo"
+)
+
 //ServiceOption service options
 type ServiceOption func(*serviceOptions)
 
@@ -8,9 +12,10 @@ type serviceOptions struct {
 }
 
 type httpEntrypoint struct {
-	path    string
-	method  string
-	invoker func([]byte) ([]byte, error)
+	path       string
+	method     string
+	reqFactory func() interface{}
+	invoker    func(interface{}) (interface{}, error)
 }
 
 // Service is a service define
@@ -36,13 +41,33 @@ func NewService(name string, metadata interface{}, opts ...ServiceOption) Servic
 	return service
 }
 
-// WithAddHTTPEntrypoint add a http service metadata
-func WithAddHTTPEntrypoint(path, method string, invoker func([]byte) ([]byte, error)) ServiceOption {
+// WithAddGetHTTPEntrypoint add a http get service metadata
+func WithAddGetHTTPEntrypoint(path string, reqFactory func() interface{}, invoker func(interface{}) (interface{}, error)) ServiceOption {
+	return withAddHTTPEntrypoint(path, echo.GET, reqFactory, invoker)
+}
+
+// WithAddPutHTTPEntrypoint add a http put service metadata
+func WithAddPutHTTPEntrypoint(path string, reqFactory func() interface{}, invoker func(interface{}) (interface{}, error)) ServiceOption {
+	return withAddHTTPEntrypoint(path, echo.PUT, reqFactory, invoker)
+}
+
+// WithAddPostHTTPEntrypoint add a http post service metadata
+func WithAddPostHTTPEntrypoint(path string, reqFactory func() interface{}, invoker func(interface{}) (interface{}, error)) ServiceOption {
+	return withAddHTTPEntrypoint(path, echo.POST, reqFactory, invoker)
+}
+
+// WithAddDeleteHTTPEntrypoint add a http post service metadata
+func WithAddDeleteHTTPEntrypoint(path string, reqFactory func() interface{}, invoker func(interface{}) (interface{}, error)) ServiceOption {
+	return withAddHTTPEntrypoint(path, echo.DELETE, reqFactory, invoker)
+}
+
+func withAddHTTPEntrypoint(path, method string, reqFactory func() interface{}, invoker func(interface{}) (interface{}, error)) ServiceOption {
 	return func(opt *serviceOptions) {
 		opt.httpEntrypoints = append(opt.httpEntrypoints, &httpEntrypoint{
-			path:    path,
-			method:  method,
-			invoker: invoker,
+			path:       path,
+			method:     method,
+			reqFactory: reqFactory,
+			invoker:    invoker,
 		})
 	}
 }

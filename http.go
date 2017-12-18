@@ -2,6 +2,7 @@ package grpcx
 
 import (
 	"context"
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -59,7 +60,7 @@ func (s *httpServer) addService(service Service) {
 }
 
 func (s *httpServer) handleHTTP(c echo.Context, ep *httpEntrypoint) error {
-	if ep.invoker == nil {
+	if ep.invoker == nil || ep.reqFactory == nil {
 		return c.NoContent(http.StatusServiceUnavailable)
 	}
 
@@ -68,9 +69,22 @@ func (s *httpServer) handleHTTP(c echo.Context, ep *httpEntrypoint) error {
 		return c.String(http.StatusBadRequest, err.Error())
 	}
 
-	result, err := ep.invoker(data)
+	req := ep.reqFactory()
+	if len(data) > 0 {
+		err = json.Unmarshal(data, req)
+		if err != nil {
+			return c.String(http.StatusBadRequest, err.Error())
+		}
+	}
+
+	rsp, err := ep.invoker(req)
 	if err != nil {
-		return c.String(http.StatusServiceUnavailable, err.Error())
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+
+	result, err := json.Marshal(rsp)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, err.Error())
 	}
 
 	return c.JSONBlob(http.StatusOK, result)
