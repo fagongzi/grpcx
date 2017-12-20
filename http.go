@@ -77,7 +77,7 @@ func (s *httpServer) handleHTTP(c echo.Context, ep *httpEntrypoint) error {
 		}
 	}
 
-	rsp, err := ep.invoker(req)
+	rsp, err := ep.invoker(req, c)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, err.Error())
 	}
