@@ -69,7 +69,7 @@ func (s *httpServer) handleHTTP(c echo.Context, ep *httpEntrypoint) error {
 		return c.String(http.StatusBadRequest, err.Error())
 	}
 
-	req := ep.reqFactory()
+	req := ep.reqFactory(c)
 	if len(data) > 0 {
 		err = json.Unmarshal(data, req)
 		if err != nil {
