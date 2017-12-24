@@ -4,6 +4,7 @@ import (
 	"net"
 
 	"github.com/fagongzi/log"
+	"github.com/labstack/echo"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/naming"
 )
@@ -13,12 +14,13 @@ type ServiceRegister func(*grpc.Server) []Service
 
 // GRPCServer is a grpc server
 type GRPCServer struct {
-	addr       string
-	httpServer *httpServer
-	server     *grpc.Server
-	opts       *serverOptions
-	register   ServiceRegister
-	services   []Service
+	addr         string
+	httpServer   *httpServer
+	server       *grpc.Server
+	opts         *serverOptions
+	register     ServiceRegister
+	services     []Service
+	httpHandlers []*httpEntrypoint
 }
 
 // NewGRPCServer returns a grpc server
@@ -33,6 +35,26 @@ func NewGRPCServer(addr string, register ServiceRegister, opts ...ServerOption) 
 		opts:     sopts,
 		register: register,
 	}
+}
+
+// AddGetHTTPHandler add get http handler
+func (s *GRPCServer) AddGetHTTPHandler(path string, handler func(echo.Context) error) {
+	s.addHTTPHandler(path, echo.GET, handler)
+}
+
+// AddPostHTTPHandler add post http handler
+func (s *GRPCServer) AddPostHTTPHandler(path string, handler func(echo.Context) error) {
+	s.addHTTPHandler(path, echo.POST, handler)
+}
+
+// AddPutHTTPHandler add put http handler
+func (s *GRPCServer) AddPutHTTPHandler(path string, handler func(echo.Context) error) {
+	s.addHTTPHandler(path, echo.PUT, handler)
+}
+
+// AddDeleteHTTPHandler add delete http handler
+func (s *GRPCServer) AddDeleteHTTPHandler(path string, handler func(echo.Context) error) {
+	s.addHTTPHandler(path, echo.DELETE, handler)
 }
 
 // Start start this api server
@@ -56,14 +78,21 @@ func (s *GRPCServer) Start() error {
 	s.publishServices()
 
 	if s.opts.httpServer != "" {
-		s.httpServer = newHTTPServer(s.opts.httpServer)
+		s.createHTTPServer()
 		for _, service := range s.services {
 			if len(service.opts.httpEntrypoints) > 0 {
-				s.httpServer.addService(service)
+				s.httpServer.addHTTPEntrypoints(service.opts.httpEntrypoints...)
 				log.Infof("rpc: service %s added to http proxy", service.Name)
 			}
 		}
+	}
 
+	if len(s.httpHandlers) > 0 {
+		s.createHTTPServer()
+		s.httpServer.addHTTPEntrypoints(s.httpHandlers...)
+	}
+
+	if s.httpServer != nil {
 		go func() {
 			err := s.httpServer.start()
 			if err != nil {
@@ -85,6 +114,20 @@ func (s *GRPCServer) GracefulStop() {
 		s.httpServer.stop()
 	}
 	s.server.GracefulStop()
+}
+
+func (s *GRPCServer) addHTTPHandler(path, method string, handler func(echo.Context) error) {
+	s.httpHandlers = append(s.httpHandlers, &httpEntrypoint{
+		path:    path,
+		method:  method,
+		handler: handler,
+	})
+}
+
+func (s *GRPCServer) createHTTPServer() {
+	if s.httpServer == nil {
+		s.httpServer = newHTTPServer(s.opts.httpServer)
+	}
 }
 
 func (s *GRPCServer) publishServices() {

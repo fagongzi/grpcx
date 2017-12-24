@@ -12,6 +12,14 @@ import (
 	md "github.com/labstack/echo/middleware"
 )
 
+type httpEntrypoint struct {
+	path       string
+	method     string
+	reqFactory func() interface{}
+	invoker    func(interface{}, echo.Context) (interface{}, error)
+	handler    func(echo.Context) error
+}
+
 type httpServer struct {
 	addr   string
 	server *echo.Echo
@@ -35,8 +43,8 @@ func (s *httpServer) stop() error {
 	return s.server.Shutdown(context.Background())
 }
 
-func (s *httpServer) addService(service Service) {
-	for _, ep := range service.opts.httpEntrypoints {
+func (s *httpServer) addHTTPEntrypoints(httpEntrypoints ...*httpEntrypoint) {
+	for _, ep := range httpEntrypoints {
 		m := strings.ToUpper(ep.method)
 		switch m {
 		case echo.GET:
@@ -60,8 +68,14 @@ func (s *httpServer) addService(service Service) {
 }
 
 func (s *httpServer) handleHTTP(c echo.Context, ep *httpEntrypoint) error {
-	if ep.invoker == nil || ep.reqFactory == nil {
+	if ep.handler == nil &&
+		ep.invoker == nil &&
+		ep.reqFactory == nil {
 		return c.NoContent(http.StatusServiceUnavailable)
+	}
+
+	if ep.handler != nil {
+		return ep.handler(c)
 	}
 
 	data, err := ioutil.ReadAll(c.Request().Body)

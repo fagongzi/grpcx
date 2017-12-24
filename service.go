@@ -11,13 +11,6 @@ type serviceOptions struct {
 	httpEntrypoints []*httpEntrypoint
 }
 
-type httpEntrypoint struct {
-	path       string
-	method     string
-	reqFactory func() interface{}
-	invoker    func(interface{}, echo.Context) (interface{}, error)
-}
-
 // Service is a service define
 type Service struct {
 	Name     string
