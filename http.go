@@ -45,23 +45,24 @@ func (s *httpServer) stop() error {
 
 func (s *httpServer) addHTTPEntrypoints(httpEntrypoints ...*httpEntrypoint) {
 	for _, ep := range httpEntrypoints {
+		invoker := ep
 		m := strings.ToUpper(ep.method)
 		switch m {
 		case echo.GET:
 			s.server.GET(ep.path, func(c echo.Context) error {
-				return s.handleHTTP(c, ep)
+				return s.handleHTTP(c, invoker)
 			})
 		case echo.PUT:
 			s.server.PUT(ep.path, func(c echo.Context) error {
-				return s.handleHTTP(c, ep)
+				return s.handleHTTP(c, invoker)
 			})
 		case echo.DELETE:
 			s.server.DELETE(ep.path, func(c echo.Context) error {
-				return s.handleHTTP(c, ep)
+				return s.handleHTTP(c, invoker)
 			})
 		case echo.POST:
 			s.server.POST(ep.path, func(c echo.Context) error {
-				return s.handleHTTP(c, ep)
+				return s.handleHTTP(c, invoker)
 			})
 		}
 	}
