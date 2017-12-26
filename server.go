@@ -1,6 +1,7 @@
 package grpcx
 
 import (
+	"fmt"
 	"net"
 
 	"github.com/fagongzi/log"
@@ -135,7 +136,7 @@ func (s *GRPCServer) publishServices() {
 		for _, service := range s.services {
 			err := s.opts.publisher.Publish(service.Name, naming.Update{
 				Op:       naming.Add,
-				Addr:     s.addr,
+				Addr:     adjustAddr(s.addr),
 				Metadata: service.Metadata,
 			})
 			if err != nil {
@@ -145,4 +146,17 @@ func (s *GRPCServer) publishServices() {
 			log.Infof("rpc: service <%s> already published", service.Name)
 		}
 	}
+}
+
+func adjustAddr(addr string) string {
+	if addr[0] == ':' {
+		ips, err := intranetIP()
+		if err != nil {
+			log.Fatalf("get intranet ip failed, error:\n%+v", err)
+		}
+
+		return fmt.Sprintf("%s%s", ips[0], addr)
+	}
+
+	return addr
 }
