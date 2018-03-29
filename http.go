@@ -11,7 +11,7 @@ import (
 // JsonResult json result
 type JsonResult struct {
 	Code int         `json:"code"`
-	Data interface{} `json:data`
+	Data interface{} `json:"data"`
 }
 
 type httpServer struct {
