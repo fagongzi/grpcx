@@ -8,12 +8,6 @@ import (
 	md "github.com/labstack/echo/middleware"
 )
 
-// JsonResult json result
-type JsonResult struct {
-	Code int         `json:"code"`
-	Data interface{} `json:"data"`
-}
-
 type httpServer struct {
 	addr   string
 	server *echo.Echo
